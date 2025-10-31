@@ -1,0 +1,29 @@
+[Unit]
+Description=WhatsApp Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/whatsapp-service
+ExecStart=/usr/bin/node simple-server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3002
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/whatsapp-service
+ProtectHome=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=whatsapp-service
+
+[Install]
+WantedBy=multi-user.target

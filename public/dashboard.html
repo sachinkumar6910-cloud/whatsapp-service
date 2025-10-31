@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Multi-Tenant Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .qr-container.show {
+            display: block;
+        }
+
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            display: inline-block;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+
+        .qr-code img {
+            max-width: 300px;
+            width: 100%;
+            height: auto;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 10px 0;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .client-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .client-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .client-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .client-id {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .client-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .client-status.connected {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .client-status.waiting_for_qr {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .client-status.needs-reauth {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .client-status.disconnected {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        .client-status.auth_failed {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .message-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .message-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .message-from {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .message-body {
+            margin-top: 5px;
+            color: #666;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 WhatsApp Multi-Tenant Dashboard</h1>
+            <p>Manage multiple WhatsApp clients with QR code authentication</p>
+        </div>
+
+        <div class="content">
+            <!-- Create Client Section -->
+            <div class="section">
+                <h2>➕ Create New Client</h2>
+                <div class="form-group">
+                    <label for="newClientId">Client ID</label>
+                    <input type="text" id="newClientId" placeholder="e.g., client_abc, john_doe">
+                </div>
+                <button onclick="createClient()">Create Client</button>
+                <div id="createStatus"></div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="section">
+                <h2>📱 QR Code Authentication</h2>
+                <div class="form-group">
+                    <label for="qrClientId">Select Client</label>
+                    <select id="qrClientId">
+                        <option value="">Choose a client...</option>
+                    </select>
+                </div>
+                <button onclick="getQRCode()">Get QR Code</button>
+                <div id="qrStatus"></div>
+                <div id="qrContainer" class="qr-container">
+                    <div class="qr-code">
+                        <img id="qrImage" src="" alt="QR Code">
+                    </div>
+                    <p style="margin-top: 15px; color: #666;">
+                        📱 Open WhatsApp on your phone → Settings → Linked Devices → Link a Device → Scan this QR code
+                    </p>
+                </div>
+            </div>
+
+            <!-- Send Message Section -->
+            <div class="section">
+                <h2>💬 Send Message</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="messageClientId">Client</label>
+                        <select id="messageClientId">
+                            <option value="">Choose a client...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipient">Recipient Phone</label>
+                        <input type="text" id="recipient" placeholder="1234567890@c.us">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="messageText">Message</label>
+                    <textarea id="messageText" rows="3" placeholder="Type your message here..."></textarea>
+                </div>
+                <button onclick="sendMessage()">Send Message</button>
+                <div id="messageStatus"></div>
+            </div>
+
+            <!-- Client Management Section -->
+            <div class="section">
+                <h2>👥 Client Management</h2>
+                <button onclick="loadClients()">Refresh Client List</button>
+                <div id="clientList" class="client-list">
+                    <!-- Client cards will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Client WhatsApp Dashboard Section -->
+            <div class="section">
+                <h2>📱 Client WhatsApp Dashboard</h2>
+                <p class="description">For clients to manage their own WhatsApp connections</p>
+
+                <div class="form-group">
+                    <label for="clientApiKey">Your Client ID:</label>
+                    <input type="text" id="clientApiKey" placeholder="Enter your client ID" required>
+                    <small style="color: #666; font-size: 12px;">Provided by your CRM administrator</small>
+                </div>
+
+                <button onclick="loadClientDashboard()">Load My WhatsApp</button>
+            </div>
+
+            <div id="clientDashboard" style="display: none;">
+                <div class="section">
+                    <h2>📱 My WhatsApp Connection</h2>
+
+                    <div id="clientStatus" class="status-card">
+                        <h3>Connection Status</h3>
+                        <div id="statusDisplay">Loading...</div>
+                    </div>
+
+                    <div id="qrSection" style="display: none;">
+                        <h3>🔄 Scan QR Code</h3>
+                        <div id="clientQrContainer" class="qr-container">
+                            <img id="clientQrImage" src="" alt="QR Code">
+                        </div>
+                        <button onclick="refreshClientQR()">🔄 Refresh QR Code</button>
+                    </div>
+
+                    <div id="messageSection" style="display: none;">
+                        <h3>💬 Send Message</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="recipient">Recipient:</label>
+                                <input type="text" id="recipient" placeholder="1234567890@c.us">
+                            </div>
+                            <div class="form-group">
+                                <label for="clientMessage">Message:</label>
+                                <textarea id="clientMessage" placeholder="Your message here..." rows="3"></textarea>
+                            </div>
+                        </div>
+                        <button onclick="sendClientMessage()">📤 Send Message</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3002';
+
+        // Load clients on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadClients();
+        });
+
+        async function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        async function createClient() {
+            const clientId = document.getElementById('newClientId').value.trim();
+
+            if (!clientId) {
+                showStatus('createStatus', 'Please enter a client ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/client/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ clientId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('createStatus', `✅ Client "${clientId}" created successfully!`, 'success');
+                    document.getElementById('newClientId').value = '';
+                    loadClients(); // Refresh the client list
+                } else {
+                    showStatus('createStatus', `❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('createStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getQRCode() {
+            const clientId = document.getElementById('qrClientId').value;
+            const qrContainer = document.getElementById('qrContainer');
+            const qrImage = document.getElementById('qrImage');
+
+            if (!clientId) {
+                showStatus('qrStatus', 'Please select a client', 'error');
+                return;
+            }
+
+            await showQR(clientId, qrContainer, qrImage, 'qrStatus');
+        }
+
+        async function showQR(clientId, qrContainer, qrImage, statusElementId) {
+            if (!qrContainer) qrContainer = document.getElementById('qrContainer');
+            if (!qrImage) qrImage = document.getElementById('qrImage');
+            if (!statusElementId) statusElementId = 'qrStatus';
+
+            try {
+                showStatus(statusElementId, '🔄 Fetching QR code...', 'info');
+
+                const response = await fetch(`${API_BASE}/client/${clientId}/qr`);
+                const data = await response.json();
+
+                if (data.success && data.qr) {
+                    qrImage.src = data.qr;
+                    qrContainer.classList.add('show');
+                    showStatus(statusElementId, '✅ QR Code generated! Scan it with WhatsApp', 'success');
+                } else {
+                    qrContainer.classList.remove('show');
+                    showStatus(statusElementId, data.message || 'QR code not available', 'warning');
+                }
+            } catch (error) {
+                showStatus(statusElementId, `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function showQRModal(clientId) {
+            try {
+                const response = await fetch(`${API_BASE}/client/${clientId}/qr`);
+                const data = await response.json();
+
+                if (data.success && data.qr) {
+                    // Create a modal to show the QR code
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                        background: rgba(0,0,0,0.8); display: flex; align-items: center;
+                        justify-content: center; z-index: 1000;
+                    `;
+                    modal.innerHTML = `
+                        <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h3>Scan QR Code for ${clientId}</h3>
+                            <img src="${data.qr}" style="max-width: 300px; max-height: 300px;" />
+                            <br><br>
+                            <button onclick="this.parentElement.parentElement.remove()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                } else {
+                    alert(data.message || 'QR code not available');
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function sendMessage() {
+            const clientId = document.getElementById('messageClientId').value;
+            const recipient = document.getElementById('recipient').value.trim();
+            const message = document.getElementById('messageText').value.trim();
+
+            if (!clientId || !recipient || !message) {
+                showStatus('messageStatus', 'Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/client/${clientId}/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: recipient,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('messageStatus', `✅ Message sent! ID: ${data.messageId}`, 'success');
+                    document.getElementById('messageText').value = '';
+                } else {
+                    showStatus('messageStatus', `❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('messageStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadClients() {
+            try {
+                const response = await fetch(`${API_BASE}/clients`);
+                const data = await response.json();
+
+                if (data.success) {
+                    updateClientSelects(data.clients);
+                    renderClientList(data.clients);
+                }
+            } catch (error) {
+                console.error('Error loading clients:', error);
+            }
+        }
+
+        function updateClientSelects(clients) {
+            const selects = ['qrClientId', 'messageClientId'];
+
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                // Clear existing options except the first one
+                select.innerHTML = '<option value="">Choose a client...</option>';
+
+                clients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.clientId;
+                    option.textContent = `${client.clientId} (${client.status})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function renderClientList(clients) {
+            const clientList = document.getElementById('clientList');
+
+            if (clients.length === 0) {
+                clientList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No clients created yet. Create your first client above!</p>';
+                return;
+            }
+
+            clientList.innerHTML = clients.map(client => `
+                <div class="client-card">
+                    <div class="client-header">
+                        <div class="client-id">${client.clientId}</div>
+                        <div class="client-status ${client.status.toLowerCase().replace('_', '-')}">
+                            ${client.status.replace('_', ' ').toUpperCase()}
+                        </div>
+                    </div>
+                    <div class="client-info" style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                        Created: ${new Date(client.createdAt).toLocaleString()}<br>
+                        ${client.status === 'needs_reauth' ? '⚠️ ' + client.error : client.hasQR ? '🔄 Has QR code available' : '📱 Ready to connect'}
+                    </div>
+                    <div class="client-actions">
+                        ${client.status === 'needs_reauth' ?
+                            `<button onclick="showQRModal('${client.clientId}')">🔄 Re-authenticate</button>` :
+                            `<button onclick="showQRModal('${client.clientId}')">Show QR</button>`
+                        }
+                        <button onclick="checkStatus('${client.clientId}')">Check Status</button>
+                        <button class="btn-danger" onclick="deleteClient('${client.clientId}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function checkStatus(clientId) {
+            try {
+                const response = await fetch(`${API_BASE}/client/${clientId}/status`);
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Client: ${data.clientId}\nStatus: ${data.status}\nConnected: ${data.info ? 'Yes' : 'No'}`);
+                }
+            } catch (error) {
+                alert(`Error checking status: ${error.message}`);
+            }
+        }
+
+        async function deleteClient(clientId) {
+            if (!confirm(`Are you sure you want to delete client "${clientId}"? This will disconnect WhatsApp and remove all session data.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/client/${clientId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Client deleted successfully!');
+                    loadClients(); // Refresh the list
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Client Dashboard Functions
+        async function loadClientDashboard() {
+            const clientId = document.getElementById('clientApiKey').value.trim();
+            if (!clientId) {
+                alert('Please enter your Client ID');
+                return;
+            }
+
+            // Store client ID for future requests
+            window.currentClientId = clientId;
+
+            // Show client dashboard
+            document.getElementById('clientDashboard').style.display = 'block';
+
+            // Load client status
+            await loadClientStatus();
+        }
+
+        async function loadClientStatus() {
+            const clientId = window.currentClientId;
+            if (!clientId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/client/my/status`, {
+                    headers: {
+                        'x-client-id': clientId
+                    }
+                });
+                const data = await response.json();
+
+                const statusDisplay = document.getElementById('statusDisplay');
+                const qrSection = document.getElementById('qrSection');
+                const messageSection = document.getElementById('messageSection');
+
+                if (data.success) {
+                    let statusHtml = `<strong>Status:</strong> ${data.status.toUpperCase()}`;
+                    if (data.error) {
+                        statusHtml += `<br><strong>Error:</strong> ${data.error}`;
+                    }
+                    if (data.connectedAt) {
+                        statusHtml += `<br><strong>Connected:</strong> ${new Date(data.connectedAt).toLocaleString()}`;
+                    }
+
+                    statusDisplay.innerHTML = statusHtml;
+
+                    // Show appropriate sections based on status
+                    if (data.status === 'waiting_for_qr' || data.status === 'needs_reauth') {
+                        qrSection.style.display = 'block';
+                        messageSection.style.display = 'none';
+                        refreshClientQR();
+                    } else if (data.status === 'connected') {
+                        qrSection.style.display = 'none';
+                        messageSection.style.display = 'block';
+                    } else {
+                        qrSection.style.display = 'none';
+                        messageSection.style.display = 'none';
+                    }
+                } else {
+                    statusDisplay.innerHTML = `<strong>Error:</strong> ${data.error}`;
+                    qrSection.style.display = 'none';
+                    messageSection.style.display = 'none';
+                }
+            } catch (error) {
+                document.getElementById('statusDisplay').innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+
+        async function refreshClientQR() {
+            const clientId = window.currentClientId;
+            if (!clientId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/client/my/qr`, {
+                    headers: {
+                        'x-client-id': clientId
+                    }
+                });
+                const data = await response.json();
+
+                if (data.success && data.qr) {
+                    document.getElementById('clientQrImage').src = data.qr;
+                    document.getElementById('clientQrContainer').style.display = 'block';
+                } else {
+                    document.getElementById('clientQrContainer').style.display = 'none';
+                    alert(data.message || 'QR code not available');
+                }
+            } catch (error) {
+                alert(`Error loading QR code: ${error.message}`);
+            }
+        }
+
+        async function sendClientMessage() {
+            const clientId = window.currentClientId;
+            const recipient = document.getElementById('recipient').value.trim();
+            const message = document.getElementById('clientMessage').value.trim();
+
+            if (!recipient || !message) {
+                alert('Please fill in both recipient and message');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/client/my/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-client-id': clientId
+                    },
+                    body: JSON.stringify({ to: recipient, message })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Message sent successfully!');
+                    document.getElementById('recipient').value = '';
+                    document.getElementById('clientMessage').value = '';
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Auto-refresh client status every 10 seconds when dashboard is loaded
+        setInterval(() => {
+            if (window.currentClientId && document.getElementById('clientDashboard').style.display !== 'none') {
+                loadClientStatus();
+            }
+        }, 10000);
+
+        // Auto-refresh client list every 30 seconds
+        setInterval(loadClients, 30000);
+    </script>
+</body>
+</html>
